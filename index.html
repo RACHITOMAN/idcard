@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>ID Tool FINAL WORKING</title>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.5.13/dist/cropper.min.css">
+
+<style>
+body {
+  font-family: Arial;
+  margin: 0;
+  background: #f4f4f4;
+}
+
+/* LAYOUT */
+.container {
+  display: flex;
+  gap: 20px;
+  padding: 20px;
+}
+
+/* DROP AREA */
+.dropzone {
+  border: 3px dashed #999;
+  padding: 40px;
+  background: white;
+  text-align: center;
+  margin-bottom: 15px;
+  font-size: 16px;
+}
+
+/* WORKSPACE */
+.workspace {
+  width: 1100px;
+  min-height: 700px;
+  background: white;
+  border: 2px solid #333;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  padding: 15px;
+}
+
+/* CARD */
+.card {
+  width: 400px;
+  height: 220px;
+  border: 2px solid #007bff;
+  display: flex;
+  background: white;
+  overflow: hidden;
+}
+
+/* SLOT (IMPORTANT FIX) */
+.slot {
+  flex: 1;
+  height: 100%;
+  border: 1px dashed #aaa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* IMAGE INSIDE SLOT */
+.slot img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* SIDEBAR */
+.sidebar {
+  width: 280px;
+}
+
+button {
+  width: 100%;
+  padding: 12px;
+  margin-top: 10px;
+  font-size: 16px;
+}
+
+/* MODAL */
+#modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.9);
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+
+#cropImage {
+  max-width: 90%;
+  max-height: 80%;
+}
+
+#applyBtn {
+  margin-top: 15px;
+  padding: 12px 25px;
+}
+
+/* PRINT FIX (CRITICAL) */
+@media print {
+
+  body {
+    background: white !important;
+  }
+
+  .sidebar, .dropzone {
+    display: none !important;
+  }
+
+  .container {
+    display: block;
+  }
+
+  .workspace {
+    border: none !important;
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .card {
+    width: 85mm !important;
+    height: 54mm !important;
+    page-break-inside: avoid;
+  }
+
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<h2 style="padding-left:20px;">🔥 ID Tool FINAL WORKING</h2>
+
+<div class="container">
+
+  <div>
+
+    <div class="dropzone">
+      📂 Choose or Drop Images
+      <br><br>
+      <input type="file" id="fileInput" multiple>
+    </div>
+
+    <div class="workspace" id="workspace"></div>
+
+  </div>
+
+  <div class="sidebar">
+    <button onclick="window.print()">📄 Export PDF</button>
+  </div>
+
+</div>
+
+<!-- CROPPER -->
+<div id="modal">
+  <img id="cropImage">
+  <button id="applyBtn">✔ Crop & Apply</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/cropperjs@1.5.13/dist/cropper.min.js"></script>
+
+<script>
+
+const workspace = document.getElementById("workspace");
+const fileInput = document.getElementById("fileInput");
+const modal = document.getElementById("modal");
+const cropImage = document.getElementById("cropImage");
+
+let cropper = null;
+let currentSlot = null;
+
+/* FILE INPUT */
+fileInput.addEventListener("change", e => {
+  const files = [...e.target.files];
+
+  for (let i = 0; i < files.length; i += 2) {
+    workspace.appendChild(createCard(files[i], files[i + 1]));
+  }
+});
+
+/* CREATE CARD */
+function createCard(f1, f2) {
+
+  const card = document.createElement("div");
+  card.className = "card";
+
+  const s1 = document.createElement("div");
+  const s2 = document.createElement("div");
+
+  s1.className = "slot";
+  s2.className = "slot";
+
+  s1.onclick = () => openCrop(f1, s1);
+  s2.onclick = () => openCrop(f2, s2);
+
+  loadImage(f1, s1);
+  loadImage(f2, s2);
+
+  card.appendChild(s1);
+  card.appendChild(s2);
+
+  return card;
+}
+
+/* LOAD IMAGE (IMPORTANT FIX) */
+function loadImage(file, slot) {
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = e => {
+
+    const img = document.createElement("img");
+    img.src = e.target.result;
+
+    slot.innerHTML = "";
+    slot.appendChild(img);
+  };
+
+  reader.readAsDataURL(file);
+}
+
+/* OPEN CROPPER */
+function openCrop(file, slot) {
+
+  if (!file) return;
+
+  currentSlot = slot;
+
+  const reader = new FileReader();
+
+  reader.onload = e => {
+
+    cropImage.src = e.target.result;
+    modal.style.display = "flex";
+
+    cropImage.onload = () => {
+
+      if (cropper) cropper.destroy();
+
+      cropper = new Cropper(cropImage, {
+        aspectRatio: 1.586,
+        viewMode: 1,
+        autoCropArea: 1
+      });
+    };
+  };
+
+  reader.readAsDataURL(file);
+}
+
+/* APPLY CROPPED IMAGE */
+document.getElementById("applyBtn").onclick = function () {
+
+  const canvas = cropper.getCroppedCanvas({
+    width: 800
+  });
+
+  const img = document.createElement("img");
+  img.src = canvas.toDataURL("image/png");
+
+  currentSlot.innerHTML = "";
+  currentSlot.appendChild(img);
+
+  cropper.destroy();
+  cropper = null;
+  modal.style.display = "none";
+};
+
+</script>
+
+</body>
+</html>
