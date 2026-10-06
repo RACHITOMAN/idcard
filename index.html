@@ -2,18 +2,18 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>ID Tool FINAL WORKING</title>
-
+<title>ID Card Tool</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.5.13/dist/cropper.min.css">
-
 <style>
+
+* { box-sizing: border-box; }
+
 body {
-  font-family: Arial;
+  font-family: Arial, sans-serif;
   margin: 0;
-  background: #f4f4f4;
+  background: #f0f0f0;
 }
 
-/* LAYOUT */
 .container {
   display: flex;
   gap: 20px;
@@ -23,14 +23,15 @@ body {
 /* DROP AREA */
 .dropzone {
   border: 3px dashed #999;
-  padding: 40px;
+  padding: 30px 40px;
   background: white;
   text-align: center;
   margin-bottom: 15px;
-  font-size: 16px;
+  font-size: 15px;
+  cursor: pointer;
   transition: background 0.2s, border-color 0.2s;
+  border-radius: 6px;
 }
-
 .dropzone.dragover {
   background: #e6f0ff;
   border-color: #007bff;
@@ -38,344 +39,450 @@ body {
 
 /* WORKSPACE */
 .workspace {
-  width: 1100px;
-  min-height: 700px;
+  width: 880px;
+  min-height: 400px;
   background: white;
-  border: 2px solid #333;
+  border: 2px solid #ccc;
   display: flex;
   flex-wrap: wrap;
-  gap: 15px;
+  gap: 12px;
   padding: 15px;
+  border-radius: 6px;
 }
 
-/* CARD = single cropped ID image */
+/* CARD */
 .card {
-  width: 400px;
-  height: 252px; /* 85mm x 54mm ratio */
+  width: 280px;
+  height: 177px;
   border: 2px solid #007bff;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #eee;
+  cursor: pointer;
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: white;
-  overflow: hidden;
+  color: #aaa;
+  font-size: 13px;
 }
-
+.card:hover::after {
+  content: "✏️ Click to crop";
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  color: white;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
 .card img {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
+  display: block;
 }
 
 /* SIDEBAR */
 .sidebar {
-  width: 280px;
+  width: 220px;
+  flex-shrink: 0;
 }
-
-button {
-  width: 100%;
-  padding: 12px;
-  margin-top: 10px;
-  font-size: 16px;
+.sidebar label {
+  font-size: 13px;
+  font-weight: bold;
+  display: block;
+  margin-top: 12px;
+  margin-bottom: 4px;
 }
-
-select {
+.sidebar select,
+.sidebar button {
   width: 100%;
   padding: 10px;
-  margin-top: 10px;
   font-size: 14px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  margin-bottom: 8px;
+  cursor: pointer;
 }
+.sidebar button {
+  background: #007bff;
+  color: white;
+  border: none;
+  font-weight: bold;
+}
+.sidebar button:hover { background: #0056b3; }
+.sidebar .clear-btn {
+  background: #dc3545;
+}
+.sidebar .clear-btn:hover { background: #a71d2a; }
 
-/* MODAL */
+/* MODAL OVERLAY */
 #modal {
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.9);
-  justify-content: center;
-  align-items: center;
+  background: rgba(0,0,0,0.92);
+  z-index: 9999;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
 }
 
+/* CROP AREA */
+#cropWrapper {
+  width: 80vw;
+  height: 60vh;
+  max-width: 900px;
+  position: relative;
+  background: #111;
+}
 #cropImage {
-  max-width: 90%;
-  max-height: 70%;
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
 }
 
+/* CONTROLS BAR */
 #cropControls {
   display: flex;
-  gap: 10px;
-  margin-top: 15px;
+  gap: 8px;
+  margin-top: 14px;
   flex-wrap: wrap;
   justify-content: center;
+  padding: 0 10px;
 }
-
 #cropControls button {
-  width: auto;
-  padding: 10px 16px;
-  margin: 0;
+  background: #333;
+  color: white;
+  border: 1px solid #555;
+  padding: 8px 14px;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+#cropControls button:hover { background: #555; }
+#cropControls button.active {
+  background: #007bff;
+  border-color: #007bff;
 }
 
+#modalActions {
+  display: flex;
+  gap: 12px;
+  margin-top: 14px;
+}
 #applyBtn {
-  padding: 12px 25px;
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 12px 28px;
+  font-size: 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
 }
+#applyBtn:hover { background: #1e7e34; }
+#cancelBtn {
+  background: #555;
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  font-size: 15px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+#cancelBtn:hover { background: #333; }
 
-/* PRINT FIX (CRITICAL) */
+/* PRINT */
 @media print {
-
-  body {
-    background: white !important;
-  }
-
-  body > h2, .sidebar, .dropzone {
-    display: none !important;
-  }
-
-  .container {
-    display: block;
-  }
-
-  .workspace {
-    border: none !important;
-    width: 100% !important;
+  body > * { display: none !important; }
+  #printArea {
     display: flex !important;
     flex-wrap: wrap;
-    gap: 2mm;
-    padding: 0 !important;
-    justify-content: flex-start;
+    gap: 3mm;
+    padding: 0;
+    margin: 0;
   }
-
-  /* Vertical layout: 1 column, stacked tightly */
-  .workspace.layout-vertical {
-    flex-direction: column;
-  }
-
-  .card {
-    border: none !important;
-    width: 95mm !important;
-    height: 60mm !important;
+  .print-card {
+    width: 95mm;
+    height: 60mm;
+    overflow: hidden;
     page-break-inside: avoid;
     margin: 0;
   }
-
+  .print-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  #printArea.layout-vertical {
+    flex-direction: column;
+  }
   @page {
     size: A4;
     margin: 5mm;
   }
 }
+
+/* hidden print area lives outside container */
+#printArea {
+  display: none;
+}
+
 </style>
 </head>
-
 <body>
-
-<h2 style="padding-left:20px;">🔥 ID Tool FINAL WORKING</h2>
 
 <div class="container">
 
   <div>
-
-    <div class="dropzone">
-      📂 Choose or Drop Images
+    <div class="dropzone" id="dropzone">
+      📂 <strong>Drop images here</strong> or click to choose
       <br><br>
-      <input type="file" id="fileInput" multiple>
+      <input type="file" id="fileInput" multiple accept="image/*" style="display:none">
     </div>
-
-    <div class="workspace layout-horizontal" id="workspace"></div>
-
+    <div class="workspace" id="workspace">
+      <span style="color:#bbb; font-size:13px; align-self:center; margin:auto;">Images will appear here</span>
+    </div>
   </div>
 
   <div class="sidebar">
-    <label for="layoutSelect"><strong>PDF Layout</strong></label>
+    <label>PDF Layout</label>
     <select id="layoutSelect">
+      <option value="layout-vertical">Vertical (1 per row)</option>
       <option value="layout-horizontal">Side by side (2 per row)</option>
-      <option value="layout-vertical">Vertical (stacked)</option>
     </select>
-    <button onclick="window.print()">📄 Export PDF</button>
+    <button onclick="exportPDF()">📄 Export PDF</button>
+    <button class="clear-btn" onclick="clearAll()">🗑 Clear All</button>
   </div>
 
 </div>
 
-<!-- CROPPER -->
-<div id="modal">
-  <img id="cropImage">
+<!-- Hidden print-only area -->
+<div id="printArea"></div>
 
-  <div id="cropControls">
-    <button onclick="setAspect(1.586)">📇 ID Ratio</button>
-    <button onclick="setAspect(NaN)">✋ Free Crop</button>
-    <button onclick="zoomCrop(0.1)">🔍 Zoom In</button>
-    <button onclick="zoomCrop(-0.1)">🔎 Zoom Out</button>
-    <button onclick="rotateCrop(-90)">⟲ Rotate Left</button>
-    <button onclick="rotateCrop(90)">⟳ Rotate Right</button>
-    <button onclick="resetCrop()">↺ Reset</button>
+<!-- CROP MODAL -->
+<div id="modal">
+  <div id="cropWrapper">
+    <img id="cropImage" src="">
   </div>
 
-  <button id="applyBtn">✔ Crop & Apply</button>
+  <div id="cropControls">
+    <button id="btnLock" class="active" onclick="setAspect(1.586, this)">🔒 ID Ratio</button>
+    <button onclick="setAspect(NaN, this)">✋ Free Crop</button>
+    <button onclick="zoomCrop(0.1)">🔍 Zoom In</button>
+    <button onclick="zoomCrop(-0.1)">🔎 Zoom Out</button>
+    <button onclick="rotateCrop(-90)">⟲ Rotate L</button>
+    <button onclick="rotateCrop(90)">⟳ Rotate R</button>
+    <button onclick="resetCrop()">↺ Reset</button>
+    <button onclick="openStraighten()" id="btnStraighten">📐 Straighten</button>
+  </div>
+
+  <!-- Straighten slider (hidden until activated) -->
+  <div id="straightenBar" style="display:none; align-items:center; gap:10px; margin-top:10px; color:white; font-size:13px;">
+    <span>-45°</span>
+    <input type="range" id="straightenSlider" min="-45" max="45" value="0" step="0.5"
+      style="width:260px; cursor:pointer;"
+      oninput="document.getElementById('straightenVal').textContent = this.value + '°'; applyStraighten(this.value)">
+    <span>+45°</span>
+    <strong id="straightenVal" style="min-width:36px; text-align:center;">0°</strong>
+    <button onclick="closeStraighten()" style="background:#555; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Done</button>
+  </div>
+
+  <div id="modalActions">
+    <button id="applyBtn">✔ Apply Crop</button>
+    <button id="cancelBtn">✖ Cancel</button>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.5.13/dist/cropper.min.js"></script>
-
 <script>
 
-const workspace = document.getElementById("workspace");
-const fileInput = document.getElementById("fileInput");
-const modal = document.getElementById("modal");
-const cropImage = document.getElementById("cropImage");
+const workspace    = document.getElementById("workspace");
+const fileInput    = document.getElementById("fileInput");
+const dropzone     = document.getElementById("dropzone");
+const modal        = document.getElementById("modal");
+const cropImg      = document.getElementById("cropImage");
 const layoutSelect = document.getElementById("layoutSelect");
-const dropzone = document.querySelector(".dropzone");
+const printArea    = document.getElementById("printArea");
 
-let cropper = null;
-let currentSlot = null;
+let cropper     = null;
+let currentCard = null;
+let straightenAngle = 0;
 
-/* DRAG & DROP HANDLING (prevents browser opening the file) */
-["dragenter", "dragover"].forEach(evt => {
-  dropzone.addEventListener(evt, e => {
-    e.preventDefault();
-    e.stopPropagation();
-    dropzone.classList.add("dragover");
-  });
-});
+/* ── DROPZONE ── */
+dropzone.addEventListener("click", () => fileInput.click());
 
-["dragleave", "dragend"].forEach(evt => {
-  dropzone.addEventListener(evt, e => {
-    e.preventDefault();
-    e.stopPropagation();
-    dropzone.classList.remove("dragover");
-  });
-});
-
+["dragenter","dragover"].forEach(ev =>
+  dropzone.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); dropzone.classList.add("dragover"); })
+);
+["dragleave","dragend"].forEach(ev =>
+  dropzone.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); dropzone.classList.remove("dragover"); })
+);
 dropzone.addEventListener("drop", e => {
-  e.preventDefault();
-  e.stopPropagation();
+  e.preventDefault(); e.stopPropagation();
   dropzone.classList.remove("dragover");
-
-  const files = [...e.dataTransfer.files].filter(f => f.type.startsWith("image/"));
-
-  for (let i = 0; i < files.length; i++) {
-    workspace.appendChild(createCard(files[i]));
-  }
+  handleFiles([...e.dataTransfer.files].filter(f => f.type.startsWith("image/")));
 });
+["dragover","drop"].forEach(ev => window.addEventListener(ev, e => e.preventDefault()));
 
-/* Also catch drops anywhere on the page so the browser never navigates away */
-["dragover", "drop"].forEach(evt => {
-  window.addEventListener(evt, e => {
-    e.preventDefault();
+fileInput.addEventListener("change", e => { handleFiles([...e.target.files]); fileInput.value = ""; });
+
+/* ── ADD CARDS ── */
+function handleFiles(files) {
+  const ph = workspace.querySelector("span");
+  if (ph) ph.remove();
+  files.forEach(f => {
+    const r = new FileReader();
+    r.onload = ev => addCard(ev.target.result);
+    r.readAsDataURL(f);
   });
-});
+}
 
-/* LAYOUT SWITCH */
-layoutSelect.addEventListener("change", () => {
-  workspace.classList.remove("layout-horizontal", "layout-vertical");
-  workspace.classList.add(layoutSelect.value);
-});
-
-/* FILE INPUT - one card per image */
-fileInput.addEventListener("change", e => {
-  const files = [...e.target.files];
-
-  for (let i = 0; i < files.length; i++) {
-    workspace.appendChild(createCard(files[i]));
-  }
-});
-
-/* CREATE CARD - single slot per card */
-function createCard(file) {
-
+function addCard(dataURL) {
   const card = document.createElement("div");
   card.className = "card";
-
-  card.onclick = () => openCrop(file, card);
-
-  loadImage(file, card);
-
-  return card;
-}
-
-/* LOAD IMAGE */
-function loadImage(file, slot) {
-  if (!file) return;
-
-  const reader = new FileReader();
-
-  reader.onload = e => {
-
-    const img = document.createElement("img");
-    img.src = e.target.result;
-
-    slot.innerHTML = "";
-    slot.appendChild(img);
-  };
-
-  reader.readAsDataURL(file);
-}
-
-/* OPEN CROPPER */
-function openCrop(file, slot) {
-
-  if (!file) return;
-
-  currentSlot = slot;
-
-  const reader = new FileReader();
-
-  reader.onload = e => {
-
-    cropImage.src = e.target.result;
-    modal.style.display = "flex";
-
-    cropImage.onload = () => {
-
-      if (cropper) cropper.destroy();
-
-      cropper = new Cropper(cropImage, {
-        aspectRatio: 1.586,
-        viewMode: 1,
-        autoCropArea: 1,
-        dragMode: "move",
-        cropBoxMovable: true,
-        cropBoxResizable: true,
-        toggleDragModeOnDblclick: true
-      });
-    };
-  };
-
-  reader.readAsDataURL(file);
-}
-
-/* MANUAL CROP CONTROLS */
-function setAspect(ratio) {
-  if (cropper) cropper.setAspectRatio(ratio);
-}
-
-function zoomCrop(amount) {
-  if (cropper) cropper.zoom(amount);
-}
-
-function rotateCrop(deg) {
-  if (cropper) cropper.rotate(deg);
-}
-
-function resetCrop() {
-  if (cropper) cropper.reset();
-}
-
-/* APPLY CROPPED IMAGE */
-document.getElementById("applyBtn").onclick = function () {
-
-  const canvas = cropper.getCroppedCanvas({
-    width: 800
-  });
+  card._src = dataURL;
 
   const img = document.createElement("img");
-  img.src = canvas.toDataURL("image/png");
+  img.src = dataURL;
+  card.appendChild(img);
+  card.addEventListener("click", () => openCrop(card));
+  workspace.appendChild(card);
+}
 
-  currentSlot.innerHTML = "";
-  currentSlot.appendChild(img);
+/* ── OPEN CROP MODAL ── */
+function openCrop(card) {
+  currentCard = card;
+  modal.style.display = "flex";
 
-  cropper.destroy();
-  cropper = null;
+  // Destroy any existing cropper first
+  if (cropper) { cropper.destroy(); cropper = null; }
+
+  // Reset straighten
+  straightenAngle = 0;
+  document.getElementById("straightenBar").style.display = "none";
+  document.getElementById("btnStraighten").classList.remove("active");
+  document.getElementById("straightenSlider").value = 0;
+  document.getElementById("straightenVal").textContent = "0°";
+
+  // Reset aspect button
+  document.querySelectorAll("#cropControls button").forEach(b => b.classList.remove("active"));
+  document.getElementById("btnLock").classList.add("active");
+
+  // Load image then init cropper
+  const tempImg = new Image();
+  tempImg.onload = () => {
+    cropImg.src = card._src;
+    // Small delay so the DOM img element fully updates before Cropper reads it
+    setTimeout(initCropper, 50);
+  };
+  tempImg.src = card._src;
+}
+
+function initCropper() {
+  if (cropper) { cropper.destroy(); cropper = null; }
+  cropper = new Cropper(cropImg, {
+    aspectRatio: 1.586,
+    viewMode: 1,
+    autoCropArea: 0.95,
+    dragMode: "move",
+    cropBoxMovable: true,
+    cropBoxResizable: true,
+    toggleDragModeOnDblclick: true,
+    ready() { console.log("Cropper ready"); }
+  });
+}
+
+/* ── CONTROLS ── */
+function setAspect(ratio, btn) {
+  if (!cropper) return;
+  cropper.setAspectRatio(ratio);
+  document.querySelectorAll("#cropControls button").forEach(b => b.classList.remove("active"));
+  if (btn) btn.classList.add("active");
+}
+
+function zoomCrop(v)   { if (cropper) cropper.zoom(v); }
+function rotateCrop(d) { if (cropper) cropper.rotate(d); }
+function resetCrop() {
+  if (cropper) cropper.reset();
+  straightenAngle = 0;
+  document.getElementById("straightenSlider").value = 0;
+  document.getElementById("straightenVal").textContent = "0°";
+}
+
+/* ── STRAIGHTEN ── */
+function openStraighten() {
+  const bar = document.getElementById("straightenBar");
+  const isOpen = bar.style.display === "flex";
+  bar.style.display = isOpen ? "none" : "flex";
+  document.getElementById("btnStraighten").classList.toggle("active", !isOpen);
+}
+
+function closeStraighten() {
+  document.getElementById("straightenBar").style.display = "none";
+  document.getElementById("btnStraighten").classList.remove("active");
+}
+
+function applyStraighten(val) {
+  if (!cropper) return;
+  const newAngle = parseFloat(val);
+  const delta = newAngle - straightenAngle;
+  cropper.rotate(delta);
+  straightenAngle = newAngle;
+  document.getElementById("straightenVal").textContent = val + "°";
+}
+
+/* ── APPLY ── */
+document.getElementById("applyBtn").addEventListener("click", () => {
+  if (!cropper) return;
+  const canvas = cropper.getCroppedCanvas({ width: 1000, imageSmoothingQuality: "high" });
+  const url = canvas.toDataURL("image/jpeg", 0.95);
+  currentCard.querySelector("img").src = url;
+  currentCard._src = url;
+  closeModal();
+});
+
+/* ── CANCEL ── */
+document.getElementById("cancelBtn").addEventListener("click", closeModal);
+
+function closeModal() {
+  if (cropper) { cropper.destroy(); cropper = null; }
   modal.style.display = "none";
-};
+  cropImg.src = "";
+  closeStraighten();
+}
+
+/* ── EXPORT PDF ── */
+function exportPDF() {
+  const cards = workspace.querySelectorAll(".card img");
+  if (!cards.length) { alert("No images to export."); return; }
+  printArea.innerHTML = "";
+  printArea.className = layoutSelect.value;
+  cards.forEach(img => {
+    const div = document.createElement("div");
+    div.className = "print-card";
+    const clone = document.createElement("img");
+    clone.src = img.src;
+    div.appendChild(clone);
+    printArea.appendChild(div);
+  });
+  window.print();
+}
+
+/* ── CLEAR ALL ── */
+function clearAll() {
+  if (!confirm("Clear all cards?")) return;
+  workspace.innerHTML = '<span style="color:#bbb;font-size:13px;align-self:center;margin:auto;">Images will appear here</span>';
+  printArea.innerHTML = "";
+}
 
 </script>
-
 </body>
 </html>
